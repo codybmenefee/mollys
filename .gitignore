@@ -1,0 +1,92 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Vercel
+.vercel
+
+# Production builds
+apps/*/build/
+apps/*/dist/
+packages/*/build/
+packages/*/dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# ESLint
+.eslintcache
+
+# Testing
+coverage/
+.nyc_output
+
+# Logs
+logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Local Supabase
+supabase/.branches
+supabase/.temp
+
+# PWA files
+sw.js
+workbox-*.js
+
+# AI/ML models (if any)
+*.model
+*.pkl
+*.h5
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.cert
