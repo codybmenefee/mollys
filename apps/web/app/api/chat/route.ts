@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Use provided model or default
-    const selectedModel = model || process.env.DEFAULT_MODEL || 'mistral/mixtral-8x7b-instruct:nitro'
+    const selectedModel = model || process.env.DEFAULT_MODEL || 'mistralai/mistral-7b-instruct'
 
     // Add system prompt for farming context
     const systemPrompt: ChatMessage = {
@@ -87,29 +87,67 @@ Always be practical, supportive, and focus on sustainable farming practices. Use
       const readableStream = new ReadableStream({
         start(controller) {
           const reader = response.body!.getReader()
+          let isControllerClosed = false
 
-          function pump(): Promise<void> {
-            return reader.read().then(({ done, value }) => {
-              if (done) {
-                controller.close()
-                return
+          async function pump(): Promise<void> {
+            try {
+              while (!isControllerClosed) {
+                const { done, value } = await reader.read()
+                
+                if (done) {
+                  if (!isControllerClosed) {
+                    try {
+                      controller.close()
+                    } catch (e) {
+                      // Controller might already be closed
+                    }
+                    isControllerClosed = true
+                  }
+                  break
+                }
+
+                if (!isControllerClosed && value) {
+                  try {
+                    controller.enqueue(value)
+                  } catch (e) {
+                    // Controller is closed, stop pumping
+                    isControllerClosed = true
+                    break
+                  }
+                }
               }
-              controller.enqueue(value)
-              return pump()
-            }).catch((error) => {
-              console.error('Stream error:', error)
-              controller.error(error)
-            })
+            } catch (error) {
+              if (!isControllerClosed) {
+                try {
+                  controller.error(error)
+                } catch (e) {
+                  // Controller might already be closed
+                }
+                isControllerClosed = true
+              }
+            } finally {
+              try {
+                reader.releaseLock()
+              } catch (e) {
+                // Reader might already be released
+              }
+            }
           }
 
-          return pump()
+          pump().catch((error) => {
+            console.error('Stream pump error:', error)
+          })
+        },
+        cancel() {
+          console.log('Stream cancelled by client')
         }
       })
 
       return new NextResponse(readableStream, {
         headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'Transfer-Encoding': 'chunked',
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
         }
       })
     } else {

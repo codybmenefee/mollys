@@ -73,7 +73,7 @@ cp apps/web/.env.local.example apps/web/.env.local
 
 # Edit .env.local with your credentials:
 OPENROUTER_API_KEY=sk-or-v1-your-api-key-here
-DEFAULT_MODEL=mistral/mixtral-8x7b-instruct:nitro
+DEFAULT_MODEL=mistralai/mistral-7b-instruct
 ```
 
 ### 2. Install Dependencies

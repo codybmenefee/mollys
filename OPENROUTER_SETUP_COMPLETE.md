@@ -14,10 +14,10 @@ Your **PasturePilot** chat interface is fully connected to OpenRouter with a pro
 - ✅ **Farming Context** - Specialized system prompt for livestock farming
 
 ### 🤖 Available Models
-- Mixtral 8x7B (Fast) - `mistral/mixtral-8x7b-instruct:nitro`
+- Mistral 7B (Fast) - `mistralai/mistral-7b-instruct`
 - Claude 3 Haiku - `anthropic/claude-3-haiku` 
-- GPT-3.5 Turbo - `openai/gpt-3.5-turbo`
-- GPT-4 Turbo - `openai/gpt-4-turbo-preview`
+- GPT-4o Mini - `openai/gpt-4o-mini`
+- GPT-4o - `openai/gpt-4o`
 
 ## 🔧 Setup Instructions
 
@@ -138,7 +138,7 @@ npm run dev
 ### Environment Variables (Vercel/Production)
 ```bash
 OPENROUTER_API_KEY=sk-or-v1-your-production-key
-DEFAULT_MODEL=mistral/mixtral-8x7b-instruct:nitro
+DEFAULT_MODEL=mistralai/mistral-7b-instruct
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
