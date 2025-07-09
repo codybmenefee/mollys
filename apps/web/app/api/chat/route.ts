@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
     const body: ChatRequest = await request.json()
     const { messages, model, stream = true } = body
 
+    // TODO: Route to agents based on intent
+    // e.g., if user says "log this" → call LoggingAgent
+    // For now, just stream OpenRouter response
+
     // Validate required environment variables
     const openRouterApiKey = process.env.OPENROUTER_API_KEY
     if (!openRouterApiKey) {
