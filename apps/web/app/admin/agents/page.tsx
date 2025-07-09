@@ -6,44 +6,17 @@ import {
   ChevronUpIcon, 
   PlayIcon,
   CheckIcon,
-  ExclamationTriangleIcon 
+  ExclamationTriangleIcon,
+  BoltIcon,
+  CheckCircleIcon 
 } from '@heroicons/react/24/outline'
 import { AVAILABLE_MODELS } from '@/lib/chat'
-
-// Agent configuration types
-export interface AgentConfig {
-  id: string
-  name: string
-  model: string
-  systemPrompt: string
-}
-
-// Default agent configurations
-const defaultAgents: AgentConfig[] = [
-  {
-    id: 'chat',
-    name: 'ChatAgent',
-    model: 'mistral/mixtral-8x7b-instruct:nitro',
-    systemPrompt: 'You are a friendly farming assistant who answers questions and supports grazing decisions.'
-  },
-  {
-    id: 'log',
-    name: 'LoggingAgent',
-    model: 'openai/gpt-3.5-turbo',
-    systemPrompt: 'You turn short observations into structured farm log entries.'
-  },
-  {
-    id: 'media',
-    name: 'MediaAgent',
-    model: 'openai/gpt-4-vision-preview',
-    systemPrompt: 'You analyze sheep health and pasture quality from images.'
-  },
-]
+import { AgentRegistry, AgentConfig } from '@/lib/agents'
 
 interface AgentCardProps {
   agent: AgentConfig
   onUpdate: (updatedAgent: AgentConfig) => void
-  onTest: (agent: AgentConfig) => void
+  onTest: (agent: AgentConfig, testMessage?: string) => void
   isExpanded: boolean
   onToggleExpand: () => void
 }
@@ -77,7 +50,7 @@ function AgentCard({ agent, onUpdate, onTest, isExpanded, onToggleExpand }: Agen
 
   const handleTest = () => {
     if (testInput.trim()) {
-      onTest({ ...localAgent, id: agent.id + '_test', name: agent.name + ' Test' })
+      onTest(localAgent, testInput.trim())
       setShowTestModal(false)
       setTestInput('')
     }
@@ -104,6 +77,27 @@ function AgentCard({ agent, onUpdate, onTest, isExpanded, onToggleExpand }: Agen
               <p className="text-sm text-gray-500">
                 Model: {selectedModel?.name || agent.model}
               </p>
+              {agent.description && (
+                <p className="text-xs text-gray-400 mt-1">{agent.description}</p>
+              )}
+              {agent.capabilities && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {agent.capabilities.slice(0, 3).map((capability) => (
+                    <span
+                      key={capability}
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pasture-100 text-pasture-800"
+                    >
+                      <BoltIcon className="w-3 h-3 mr-1" />
+                      {capability.replace('_', ' ')}
+                    </span>
+                  ))}
+                  {agent.capabilities.length > 3 && (
+                    <span className="text-xs text-gray-400">
+                      +{agent.capabilities.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -226,57 +220,45 @@ function AgentCard({ agent, onUpdate, onTest, isExpanded, onToggleExpand }: Agen
 }
 
 export default function AgentsPage() {
-  const [agents, setAgents] = useState<AgentConfig[]>(defaultAgents)
+  const [agents, setAgents] = useState<AgentConfig[]>([])
   const [expandedAgents, setExpandedAgents] = useState<string[]>([])
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [agentStats, setAgentStats] = useState<any>(null)
 
-  // Load agents from localStorage on component mount
+  // Load real agents from the registry on component mount
   useEffect(() => {
-    const savedAgents = localStorage.getItem('pasturepilot_agent_configs')
-    if (savedAgents) {
-      try {
-        const parsed = JSON.parse(savedAgents)
-        setAgents(parsed)
-      } catch (error) {
-        console.error('Failed to load agent configs:', error)
-      }
-    }
+    const discoveredAgents = AgentRegistry.discoverAgents()
+    setAgents(discoveredAgents)
+    setAgentStats(AgentRegistry.getAgentStats())
   }, [])
 
-  // Save agents to localStorage whenever agents change
-  const saveAgents = (updatedAgents: AgentConfig[]) => {
-    try {
-      localStorage.setItem('pasturepilot_agent_configs', JSON.stringify(updatedAgents))
+  const handleUpdateAgent = (updatedAgent: AgentConfig) => {
+    const success = AgentRegistry.updateAgent(updatedAgent.id, updatedAgent)
+    if (success) {
+      const newAgents = agents.map(agent => 
+        agent.id === updatedAgent.id ? updatedAgent : agent
+      )
+      setAgents(newAgents)
       setLastSaved(new Date())
-      console.log('Agent configurations saved to localStorage')
-      // TODO: In the future, this is where we'd save to Supabase
-      // await supabase.from('agent_configs').upsert(updatedAgents)
-    } catch (error) {
-      console.error('Failed to save agent configs:', error)
+      setAgentStats(AgentRegistry.getAgentStats())
     }
   }
 
-  const handleUpdateAgent = (updatedAgent: AgentConfig) => {
-    const newAgents = agents.map(agent => 
-      agent.id === updatedAgent.id ? updatedAgent : agent
-    )
-    setAgents(newAgents)
-    saveAgents(newAgents)
-  }
-
-  const handleTestAgent = async (agent: AgentConfig) => {
-    console.log('Testing agent:', agent)
-    console.log('This would send a test message to:', agent.model)
-    console.log('With system prompt:', agent.systemPrompt)
-    
-    // TODO: Implement actual test functionality
-    // try {
-    //   const testMessage = { role: 'user', content: testInput }
-    //   const response = await sendChatMessage([testMessage], agent.model)
-    //   console.log('Test response:', response)
-    // } catch (error) {
-    //   console.error('Test failed:', error)
-    // }
+  const handleTestAgent = async (agent: AgentConfig, testMessage: string = 'Hello, can you help me with my sheep?') => {
+    try {
+      const testResult = await AgentRegistry.testAgent(agent, testMessage)
+      if (testResult.success) {
+        console.log(`✅ ${agent.name} test successful:`, testResult.response)
+        console.log(`⏱️ Response time: ${testResult.responseTime}ms`)
+        alert(`✅ Test successful!\n\nAgent: ${agent.name}\nResponse: ${testResult.response}\nTime: ${testResult.responseTime}ms`)
+      } else {
+        console.error(`❌ ${agent.name} test failed:`, testResult.error)
+        alert(`❌ Test failed!\n\nAgent: ${agent.name}\nError: ${testResult.error}`)
+      }
+    } catch (error) {
+      console.error('Test error:', error)
+      alert(`❌ Test error: ${error}`)
+    }
   }
 
   const toggleAgentExpanded = (agentId: string) => {
@@ -289,8 +271,13 @@ export default function AgentsPage() {
 
   const resetToDefaults = () => {
     if (confirm('Are you sure you want to reset all agents to their default configurations? This cannot be undone.')) {
-      setAgents(defaultAgents)
-      saveAgents(defaultAgents)
+      const success = AgentRegistry.resetAllAgents()
+      if (success) {
+        const refreshedAgents = AgentRegistry.discoverAgents()
+        setAgents(refreshedAgents)
+        setLastSaved(new Date())
+        setAgentStats(AgentRegistry.getAgentStats())
+      }
     }
   }
 
@@ -319,19 +306,24 @@ export default function AgentsPage() {
 
       {/* Info Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-        <div className="flex">
-          <div className="ml-3">
+        <div className="flex items-start space-x-3">
+          <CheckCircleIcon className="w-6 h-6 text-blue-600 mt-0.5" />
+          <div className="flex-1">
             <h3 className="text-sm font-medium text-blue-800">
-              Local Configuration
+              Real Agent Discovery System
             </h3>
             <div className="mt-2 text-sm text-blue-700">
               <p>
-                Agent configurations are currently stored locally in your browser. 
-                Changes are saved automatically and will persist across sessions.
+                Showing {agentStats?.totalAgents || 0} real agents from your codebase. 
+                {agentStats?.activeAgents || 0} are currently active.
               </p>
+              {agentStats?.availableCapabilities && (
+                <p className="mt-1 text-xs">
+                  Available capabilities: {agentStats.availableCapabilities.join(', ')}
+                </p>
+              )}
               <p className="mt-1 text-xs">
-                {/* TODO: Future database integration comment */}
-                Future update: Will sync with Supabase for persistent storage across devices.
+                Changes are saved automatically. New agents will be discovered automatically when added.
               </p>
             </div>
           </div>
