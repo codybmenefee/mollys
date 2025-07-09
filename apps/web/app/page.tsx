@@ -7,15 +7,15 @@ import {
   CameraIcon,
   SunIcon,
   CloudIcon,
+  CogIcon,
 } from '@heroicons/react/24/outline'
 import { MicrophoneIcon as MicrophoneIconSolid } from '@heroicons/react/24/solid'
+import { sendChatMessage, ChatHistory, ChatLogger, AVAILABLE_MODELS } from '@/lib/chat'
+import { ChatMessage } from '@/types/chat'
+import ModelSelector from '@/components/ModelSelector'
 
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-  type?: 'text' | 'voice' | 'image'
+interface Message extends ChatMessage {
+  // Extending ChatMessage for local use
 }
 
 export default function Home() {
@@ -23,7 +23,7 @@ export default function Home() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI farming assistant. How can I help you with your sheep today? You can tell me about their behavior, health, grazing conditions, or anything else on your mind.',
+      content: 'Hello! I\'m PasturePilot, your AI farming assistant. 🐑 How can I help you with your livestock today? You can ask about sheep behavior, health, grazing conditions, or anything else on your mind.',
       timestamp: new Date(),
       type: 'text'
     }
@@ -31,6 +31,9 @@ export default function Home() {
   const [inputText, setInputText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].id)
+  const [showSettings, setShowSettings] = useState(false)
+  const [streamingMessage, setStreamingMessage] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -51,27 +54,86 @@ export default function Home() {
       type: 'text'
     }
 
+    const currentInput = inputText.trim()
     setMessages(prev => [...prev, userMessage])
     setInputText('')
     setIsLoading(true)
+    setStreamingMessage('')
+
+    // Add a placeholder AI message for streaming
+    const aiMessageId = (Date.now() + 1).toString()
+    const aiMessage: Message = {
+      id: aiMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      type: 'text',
+      model: selectedModel
+    }
+    setMessages(prev => [...prev, aiMessage])
+
+    const startTime = Date.now()
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I understand you mentioned "${inputText.trim()}". That's a great observation about your sheep! Based on what you've shared, I'd recommend monitoring their behavior over the next few days and ensuring they have access to fresh water and quality pasture. Would you like me to help you create a daily log entry for this observation?`,
-        timestamp: new Date(),
-        type: 'text'
-      }
+      await sendChatMessage(
+        [...messages, userMessage],
+        selectedModel,
+        (streamResponse) => {
+          if (streamResponse.isComplete) {
+            setMessages((prev: Message[]) => 
+              prev.map((msg: Message) => 
+                msg.id === aiMessageId 
+                  ? { ...msg, content: streamResponse.message }
+                  : msg
+              )
+            )
+            setStreamingMessage('')
+            setIsLoading(false)
 
-      setMessages(prev => [...prev, aiResponse])
+            // Log the interaction
+            const responseTime = Date.now() - startTime
+            ChatLogger.logInteraction({
+              userMessage: currentInput,
+              aiResponse: streamResponse.message,
+              model: selectedModel,
+              timestamp: new Date(),
+              responseTime
+            })
+
+            // Save conversation
+            ChatHistory.saveConversation([...messages, userMessage, {
+              ...aiMessage,
+              content: streamResponse.message
+            }])
+          } else {
+            setStreamingMessage(streamResponse.message)
+            setMessages((prev: Message[]) => 
+              prev.map((msg: Message) => 
+                msg.id === aiMessageId 
+                  ? { ...msg, content: streamResponse.message }
+                  : msg
+              )
+            )
+          }
+        }
+      )
     } catch (error) {
       console.error('Error sending message:', error)
-    } finally {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send message'
+      
+      setMessages((prev: Message[]) => 
+        prev.map((msg: Message) => 
+          msg.id === aiMessageId 
+            ? { 
+                ...msg, 
+                content: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
+                metadata: { error: errorMessage }
+              }
+            : msg
+        )
+      )
       setIsLoading(false)
+      setStreamingMessage('')
     }
   }
 
@@ -121,10 +183,17 @@ export default function Home() {
               <p className="text-sm text-gray-500">Your AI Farming Assistant</p>
             </div>
           </div>
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <SunIcon className="w-4 h-4" />
-            <span>72°F</span>
-            <CloudIcon className="w-4 h-4" />
+          <div className="flex items-center space-x-3">
+            <ModelSelector 
+              selectedModel={selectedModel}
+              onModelChange={setSelectedModel}
+              disabled={isLoading}
+            />
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <SunIcon className="w-4 h-4" />
+              <span>72°F</span>
+              <CloudIcon className="w-4 h-4" />
+            </div>
           </div>
         </div>
       </header>
