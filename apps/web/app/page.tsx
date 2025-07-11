@@ -194,6 +194,13 @@ export default function Home() {
               <span>72°F</span>
               <CloudIcon className="w-4 h-4" />
             </div>
+            <button
+              onClick={() => window.location.href = '/admin/agents'}
+              className="p-2 text-gray-500 hover:text-pasture-600 transition-colors duration-200"
+              aria-label="Admin settings"
+            >
+              <CogIcon className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
