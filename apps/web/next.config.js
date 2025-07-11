@@ -17,6 +17,17 @@ const withPWA = require('next-pwa')({
       },
     },
     {
+      urlPattern: /^https:\/\/openrouter\.ai\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'openrouter-api-cache',
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
+    {
       urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
       handler: 'NetworkFirst',
       options: {
@@ -34,9 +45,6 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    appDir: true,
-  },
   images: {
     domains: ['localhost', 'supabase.com'],
   },

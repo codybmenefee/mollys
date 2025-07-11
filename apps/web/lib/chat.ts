@@ -20,8 +20,8 @@ export interface ChatResponse {
 // Available models for the dropdown
 export const AVAILABLE_MODELS = [
   {
-    id: 'mistral/mixtral-8x7b-instruct:nitro',
-    name: 'Mixtral 8x7B (Fast)',
+    id: 'mistralai/mistral-7b-instruct',
+    name: 'Mistral 7B (Fast)',
     description: 'Fast and efficient for general farming advice'
   },
   {
@@ -30,14 +30,14 @@ export const AVAILABLE_MODELS = [
     description: 'Quick responses with good reasoning'
   },
   {
-    id: 'openai/gpt-3.5-turbo',
-    name: 'GPT-3.5 Turbo',
+    id: 'openai/gpt-4o-mini',
+    name: 'GPT-4o Mini',
     description: 'Reliable general-purpose assistant'
   },
   {
-    id: 'openai/gpt-4-turbo-preview',
-    name: 'GPT-4 Turbo',
-    description: 'Most capable but slower responses'
+    id: 'openai/gpt-4o',
+    name: 'GPT-4o',
+    description: 'Most capable with vision support'
   }
 ]
 
@@ -279,5 +279,15 @@ export class ChatLogger {
     link.click()
     
     URL.revokeObjectURL(url)
+  }
+
+  static clearLogs() {
+    try {
+      localStorage.removeItem(this.STORAGE_KEY)
+      return true
+    } catch (error) {
+      console.error('Failed to clear logs:', error)
+      return false
+    }
   }
 }

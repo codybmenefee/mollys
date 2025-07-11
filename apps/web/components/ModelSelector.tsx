@@ -68,7 +68,7 @@ export default function ModelSelector({ selectedModel, onModelChange, disabled }
             
             <div className="border-t border-gray-100 p-2">
               <div className="text-xs text-gray-400 px-2">
-                💡 Mixtral is recommended for most farming questions
+                💡 Mistral 7B is recommended for most farming questions
               </div>
             </div>
           </div>
