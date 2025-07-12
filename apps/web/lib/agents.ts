@@ -26,6 +26,28 @@ export interface AgentDefinition {
 // Real agent definitions discovered from the codebase
 const DISCOVERED_AGENTS: AgentDefinition[] = [
   {
+    id: 'kb-retriever',
+    name: 'KBRetrieverAgent',
+    description: 'Retrieves relevant information from knowledge base for enhanced responses with source citations',
+    capabilities: ['knowledge_retrieval', 'source_citation', 'farming_insights', 'contextual_assistance'],
+    defaultModel: 'mistralai/mistral-7b-instruct',
+    systemPrompt: `You are a specialized farm insights generator that retrieves and synthesizes information from the knowledge base.
+Your role:
+- Provide detailed farming advice based on ingested knowledge sources
+- Always cite sources when referencing specific information
+- Combine knowledge base content with general farming expertise
+- Focus on practical, actionable insights for sheep farmers
+- Include source URLs for verification and further reading
+
+When responding:
+- Use retrieved knowledge to provide specific, detailed advice
+- Cite sources as: [Source: Title](URL)
+- Combine multiple sources when relevant
+- Prioritize recent and high-quality sources
+- Always verify claims against retrieved content`,
+    endpoint: '/api/kb/chat'
+  },
+  {
     id: 'chat',
     name: 'ChatAgent',
     description: 'Main conversational agent for general farming assistance and guidance',
