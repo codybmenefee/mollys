@@ -9,16 +9,20 @@ interface ChatRequest {
   messages: ChatMessage[]
   model?: string
   stream?: boolean
+  farmId?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json()
-    const { messages, model, stream = true } = body
+    const { messages, model, stream = true, farmId = 'default' } = body
 
-    // TODO: Route to agents based on intent
-    // e.g., if user says "log this" → call LoggingAgent
-    // For now, just stream OpenRouter response
+    // Extract knowledge from user messages automatically (but don't update profile server-side)
+    let extractedKnowledge = null
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage && lastUserMessage.role === 'user') {
+      extractedKnowledge = await extractKnowledge(lastUserMessage.content, farmId)
+    }
 
     // Validate required environment variables
     const openRouterApiKey = process.env.OPENROUTER_API_KEY
@@ -32,7 +36,12 @@ export async function POST(request: NextRequest) {
     // Use provided model or default
     const selectedModel = model || process.env.DEFAULT_MODEL || 'mistralai/mistral-7b-instruct'
 
-    // Add system prompt for farming context
+    // Get farm context for personalized responses
+    const farmSummary = extractedKnowledge 
+      ? `Recent farm activity detected: ${JSON.stringify(extractedKnowledge)}`
+      : 'No farm profile available - will build from conversations'
+    
+    // Add system prompt for farming context with farm-specific information
     const systemPrompt: ChatMessage = {
       role: 'system',
       content: `You are PasturePilot, an AI assistant specialized in regenerative livestock farming. You help farmers with:
@@ -42,7 +51,10 @@ export async function POST(request: NextRequest) {
 - Weather-related farming decisions
 - Daily livestock observations and logging
 
-Always be practical, supportive, and focus on sustainable farming practices. Use farming-related emojis when appropriate (🐑 🌱 📝 🌾 🚜). Keep responses concise but helpful.`
+FARM CONTEXT:
+${farmSummary}
+
+Use this context to provide personalized, relevant advice. Reference specific paddocks, animals, and patterns when helpful. Always be practical, supportive, and focus on sustainable farming practices. Use farming-related emojis when appropriate (🐑 🌱 📝 🌾 🚜). Keep responses concise but helpful.`
     }
 
     // Prepare messages with system prompt
@@ -162,5 +174,43 @@ Always be practical, supportive, and focus on sustainable farming practices. Use
       { error: 'Internal server error' },
       { status: 500 }
     )
+  }
+}
+
+// Helper function to extract knowledge from user messages (server-side only)
+async function extractKnowledge(text: string, farmId: string): Promise<any> {
+  try {
+    // Only extract knowledge if the message contains farming-related content
+    const farmingKeywords = ['sheep', 'paddock', 'pasture', 'move', 'graze', 'feed', 'water', 'fence', 'gate', 'trough', 'health', 'count', 'ewes', 'rams', 'lambs']
+    const containsFarmingContent = farmingKeywords.some(keyword => 
+      text.toLowerCase().includes(keyword)
+    )
+    
+    if (!containsFarmingContent) {
+      return null // Skip knowledge extraction for non-farming messages
+    }
+
+    // Call knowledge extraction agent
+    const extractResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/agents/knowledge-extractor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        farmId,
+        date: new Date().toISOString()
+      })
+    })
+
+    if (extractResponse.ok) {
+      const extractedData = await extractResponse.json()
+      if (extractedData.success) {
+        console.log('Knowledge extracted successfully')
+        return extractedData.extracted
+      }
+    }
+    return null
+  } catch (error) {
+    console.error('Knowledge extraction failed:', error)
+    return null
   }
 }

@@ -42,6 +42,26 @@ Always be practical, supportive, and focus on sustainable farming practices. Use
     endpoint: '/api/chat'
   },
   {
+    id: 'knowledge_extractor',
+    name: 'KnowledgeExtractor',
+    description: 'Extracts structured farm data from natural language updates to build dynamic farm understanding',
+    capabilities: ['knowledge_extraction', 'data_structuring', 'farm_profiling', 'entity_recognition'],
+    defaultModel: 'openai/gpt-4o',
+    systemPrompt: `You are a specialized knowledge extraction agent for PasturePilot. Your job is to parse natural language farm updates and extract structured information.
+
+Extract and identify:
+1. **Paddock/Field Names**: Any mention of specific grazing areas, fields, or paddocks
+2. **Animal Information**: Counts, movements, health observations, behaviors
+3. **Farm Activities**: Feeding, moving, checking, treatments, repairs
+4. **Infrastructure**: Gates, water troughs, fencing, shelters, equipment
+5. **Farmer Routines**: Patterns, preferences, timing, decision-making
+6. **Weather/Environmental**: Conditions affecting farming decisions
+7. **Business/Mission Elements**: Goals, challenges, methods, philosophy
+
+Always return structured JSON data that can be used to build a comprehensive farm profile. Focus on extracting actionable, memorable information that helps understand the farm operation.`,
+    endpoint: '/api/agents/knowledge-extractor'
+  },
+  {
     id: 'summarizer',
     name: 'LogSummarizer',
     description: 'Analyzes daily farming logs and provides actionable insights and recommendations',
