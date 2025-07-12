@@ -23,20 +23,27 @@ export interface YouTubeIngestionResult {
 }
 
 export class YouTubeKBIngest {
-  private youtube: youtube_v3.Youtube;
+  private youtube: youtube_v3.Youtube | null = null;
   private readonly channelId = 'UCi8jM5w49UezskDWBGyKq5g'; // Greg Judy's channel ID
   private readonly maxResults = 50;
 
   constructor() {
-    const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) {
-      throw new Error('YOUTUBE_API_KEY environment variable is required');
-    }
+    // Initialize lazily to avoid build-time errors
+  }
 
-    this.youtube = google.youtube({
-      version: 'v3',
-      auth: apiKey,
-    });
+  private initializeYouTubeClient(): youtube_v3.Youtube {
+    if (!this.youtube) {
+      const apiKey = process.env.YOUTUBE_API_KEY;
+      if (!apiKey) {
+        throw new Error('YOUTUBE_API_KEY environment variable is required');
+      }
+
+      this.youtube = google.youtube({
+        version: 'v3',
+        auth: apiKey,
+      });
+    }
+    return this.youtube;
   }
 
   async ingestGregJudyVideos(): Promise<YouTubeIngestionResult> {
@@ -99,7 +106,8 @@ export class YouTubeKBIngest {
 
   private async getUploadsPlaylistId(): Promise<string> {
     try {
-      const response = await this.youtube.channels.list({
+      const youtube = this.initializeYouTubeClient();
+      const response = await youtube.channels.list({
         part: ['contentDetails'],
         id: [this.channelId],
       });
@@ -122,11 +130,11 @@ export class YouTubeKBIngest {
     publishDate: string;
   }>> {
     try {
-      const response = await this.youtube.playlistItems.list({
+      const youtube = this.initializeYouTubeClient();
+      const response = await youtube.playlistItems.list({
         part: ['snippet'],
         playlistId,
         maxResults: this.maxResults,
-        order: 'date',
       });
 
       const items = response.data.items || [];
@@ -144,8 +152,10 @@ export class YouTubeKBIngest {
 
   private async getVideoTranscript(videoId: string): Promise<string | null> {
     try {
+      const youtube = this.initializeYouTubeClient();
+      
       // Step 1: Get available captions for the video
-      const captionsResponse = await this.youtube.captions.list({
+      const captionsResponse = await youtube.captions.list({
         part: ['snippet'],
         videoId,
       });
@@ -171,7 +181,7 @@ export class YouTubeKBIngest {
 
       // Step 2: Download the caption
       try {
-        const captionResponse = await this.youtube.captions.download({
+        const captionResponse = await youtube.captions.download({
           id: selectedCaption.id,
           tfmt: 'srt', // Request SRT format
         });

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { youtubeKBIngest } from '../../../../lib/youtube-kb-ingest';
-import clientPromise from '../../../../lib/mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +32,7 @@ export async function POST(request: NextRequest) {
     // Optional: Log to MongoDB for monitoring/auditing
     if (process.env.MONGODB_URI) {
       try {
+        const { default: clientPromise } = await import('../../../../lib/mongodb');
         const client = await clientPromise;
         const db = client.db('pasturepilot');
         const collection = db.collection('youtube_ingestion_logs');
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     // Log error to MongoDB if possible
     if (process.env.MONGODB_URI) {
       try {
+        const { default: clientPromise } = await import('../../../../lib/mongodb');
         const client = await clientPromise;
         const db = client.db('pasturepilot');
         const collection = db.collection('youtube_ingestion_logs');
