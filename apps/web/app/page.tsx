@@ -195,6 +195,14 @@ export default function Home() {
               <CloudIcon className="w-4 h-4" />
             </div>
             <button
+              onClick={() => window.location.href = '/farm'}
+              className="p-2 text-gray-500 hover:text-pasture-600 transition-colors duration-200"
+              aria-label="Farm management"
+              title="Farm Management"
+            >
+              <span className="text-lg">🚜</span>
+            </button>
+            <button
               onClick={() => window.location.href = '/admin/agents'}
               className="p-2 text-gray-500 hover:text-pasture-600 transition-colors duration-200"
               aria-label="Admin settings"
