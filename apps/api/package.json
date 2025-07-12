@@ -14,7 +14,8 @@
     "kb-stats": "ts-node -e \"import('./src/agents/kb-store').then(({kbStore}) => kbStore.initialize().then(() => kbStore.getStats()).then(console.log))\"",
     "test-kb": "ts-node src/scripts/test-kb-connection.ts",
     "test-kb-debug": "ts-node src/scripts/test-kb-connection.ts --debug",
-    "test-kb-types": "ts-node src/scripts/test-kb-types.ts"
+    "test-kb-types": "ts-node src/scripts/test-kb-types.ts",
+    "proof-of-concept": "ts-node src/scripts/proof-of-concept.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.5",
