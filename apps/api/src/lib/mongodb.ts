@@ -1,4 +1,4 @@
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, Document as MongoDocument } from 'mongodb';
 
 // MongoDB Atlas Vector Search requires MongoDB 6.0.11+ and Atlas cluster tier M10+
 // To enable Vector Search on your Atlas cluster:
@@ -55,7 +55,7 @@ export const getDatabase = async (): Promise<Db> => {
   return client.db(dbName);
 };
 
-export const getKbChunksCollection = async (): Promise<Collection> => {
+export const getKbChunksCollection = async (): Promise<Collection<MongoDocument>> => {
   const db = await getDatabase();
   return db.collection('kb_chunks');
 };

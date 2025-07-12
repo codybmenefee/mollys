@@ -1,9 +1,9 @@
-import { Collection, Document, Filter, ObjectId } from 'mongodb';
+import { Collection, Document as MongoDocument, Filter, ObjectId } from 'mongodb';
 import { getKbChunksCollection, initializeKbIndexes } from '../lib/mongodb';
 
 // Define the schema for KB chunks
 export interface KbChunk {
-  _id?: string;
+  _id?: ObjectId;
   text: string;
   embedding: number[];
   metadata: {
@@ -18,18 +18,18 @@ export interface KbChunk {
 }
 
 export interface SearchResult {
-  chunk: KbChunk;
+  chunk: KbChunk & { _id?: string };
   score: number;
 }
 
 export interface QueryOptions {
   limit?: number;
   threshold?: number;
-  filter?: Filter<KbChunk>;
+  filter?: Filter<MongoDocument>;
 }
 
 export class KbStore {
-  private collection: Collection<KbChunk> | null = null;
+  private collection: Collection<MongoDocument> | null = null;
   
   // Initialize the KB store and ensure indexes are created
   async initialize(): Promise<void> {
@@ -44,7 +44,7 @@ export class KbStore {
   }
 
   // Get the collection, initializing if necessary
-  private async getCollection(): Promise<Collection<KbChunk>> {
+  private async getCollection(): Promise<Collection<MongoDocument>> {
     if (!this.collection) {
       await this.initialize();
     }
@@ -185,13 +185,13 @@ export class KbStore {
   }
 
   // Get chunks by metadata filter
-  async getChunksByMetadata(filter: Filter<KbChunk>): Promise<KbChunk[]> {
+  async getChunksByMetadata(filter: Filter<MongoDocument>): Promise<(KbChunk & { _id?: string })[]> {
     try {
       const collection = await this.getCollection();
       const cursor = collection.find(filter);
-      const chunks: KbChunk[] = [];
+      const chunks: (KbChunk & { _id?: string })[] = [];
 
-      await cursor.forEach((doc) => {
+      await cursor.forEach((doc: any) => {
         chunks.push({
           _id: doc._id?.toString(),
           text: doc.text,
@@ -212,17 +212,17 @@ export class KbStore {
     try {
       const collection = await this.getCollection();
       
-      // Add updated timestamp
-      const updateDoc = {
-        ...updates,
-        metadata: {
+      // Add updated timestamp to metadata if it exists
+      const updateDoc: any = { ...updates };
+      if (updates.metadata) {
+        updateDoc.metadata = {
           ...updates.metadata,
           updatedAt: new Date(),
-        },
-      };
+        };
+      }
 
       const result = await collection.updateOne(
-        { _id: id as any },
+        { _id: new ObjectId(id) },
         { $set: updateDoc }
       );
 
@@ -237,7 +237,7 @@ export class KbStore {
   async deleteChunk(id: string): Promise<boolean> {
     try {
       const collection = await this.getCollection();
-      const result = await collection.deleteOne({ _id: id as any });
+      const result = await collection.deleteOne({ _id: new ObjectId(id) });
       return result.deletedCount > 0;
     } catch (error) {
       console.error('Error deleting chunk:', error);
@@ -246,7 +246,7 @@ export class KbStore {
   }
 
   // Delete chunks by metadata filter
-  async deleteChunksByMetadata(filter: Filter<KbChunk>): Promise<number> {
+  async deleteChunksByMetadata(filter: Filter<MongoDocument>): Promise<number> {
     try {
       const collection = await this.getCollection();
       const result = await collection.deleteMany(filter);
