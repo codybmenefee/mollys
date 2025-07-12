@@ -26,8 +26,11 @@ function parseMarkdown(text: string): string {
   // Italic
   html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
   
-  // Links
+  // Links (including source citations)
   html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-pasture-600 hover:text-pasture-700 underline" target="_blank" rel="noopener noreferrer">$1</a>')
+  
+  // Source citations with special styling
+  html = html.replace(/\[Source: ([^\]]+)\]\(([^)]+)\)/g, '<div class="inline-block bg-pasture-50 text-pasture-800 px-2 py-1 rounded-md text-xs font-medium border border-pasture-200 ml-1"><a href="$2" class="hover:underline" target="_blank" rel="noopener noreferrer">📚 $1</a></div>')
   
   // Line breaks
   html = html.replace(/\n/g, '<br>')

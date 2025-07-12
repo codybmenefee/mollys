@@ -9,12 +9,18 @@ interface ChatRequest {
   messages: ChatMessage[]
   model?: string
   stream?: boolean
+  kbChunks?: Array<{
+    content: string
+    source: string
+    title: string
+    similarity: number
+  }>
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json()
-    const { messages, model, stream = true } = body
+    const { messages, model, stream = true, kbChunks = [] } = body
 
     // TODO: Route to agents based on intent
     // e.g., if user says "log this" → call LoggingAgent
@@ -32,10 +38,8 @@ export async function POST(request: NextRequest) {
     // Use provided model or default
     const selectedModel = model || process.env.DEFAULT_MODEL || 'mistralai/mistral-7b-instruct'
 
-    // Add system prompt for farming context
-    const systemPrompt: ChatMessage = {
-      role: 'system',
-      content: `You are PasturePilot, an AI assistant specialized in regenerative livestock farming. You help farmers with:
+    // Add system prompt for farming context with KB sources
+    let systemContent = `You are PasturePilot, an AI assistant specialized in regenerative livestock farming. You help farmers with:
 - Sheep health, behavior, and welfare
 - Pasture management and rotational grazing
 - Regenerative farming practices
@@ -43,6 +47,19 @@ export async function POST(request: NextRequest) {
 - Daily livestock observations and logging
 
 Always be practical, supportive, and focus on sustainable farming practices. Use farming-related emojis when appropriate (🐑 🌱 📝 🌾 🚜). Keep responses concise but helpful.`
+
+    // Add KB sources if available
+    if (kbChunks.length > 0) {
+      systemContent += `\n\nUse these sources to provide more detailed and accurate information:\n`
+      kbChunks.forEach((chunk, index) => {
+        systemContent += `\nSource ${index + 1} (${chunk.title}): ${chunk.content}\n[Source URL: ${chunk.source}]\n`
+      })
+      systemContent += `\nWhen referencing these sources, include the source URL in your response for citation.`
+    }
+
+    const systemPrompt: ChatMessage = {
+      role: 'system',
+      content: systemContent
     }
 
     // Prepare messages with system prompt

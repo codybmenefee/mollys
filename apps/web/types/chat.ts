@@ -9,6 +9,11 @@ export interface ChatMessage {
     responseTime?: number
     tokens?: number
     error?: string
+    sources?: Array<{
+      url: string
+      title: string
+      type: string
+    }>
   }
 }
 
