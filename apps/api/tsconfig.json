@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "lib": ["es2020"],
+    "lib": ["es2020", "dom"],
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,
@@ -17,7 +17,8 @@
       "@/agents/*": ["./src/agents/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/routes/*": ["./src/routes/*"],
-      "@/types/*": ["./src/types/*"]
+      "@/types/*": ["./src/types/*"],
+      "@pasture-pilot/shared": ["../../packages/shared/src"]
     },
     "types": ["node"],
     "resolveJsonModule": true

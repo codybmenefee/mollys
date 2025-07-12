@@ -1,4 +1,5 @@
 import { ChatMessage } from '@/types/chat'
+import { KnowledgeBaseStore } from './kb-store'
 
 export interface StreamResponse {
   message: string
@@ -47,6 +48,16 @@ export async function sendChatMessage(
   onStream?: (response: StreamResponse) => void
 ): Promise<ChatResponse> {
   try {
+    // Get the last user message for KB retrieval
+    const lastUserMessage = messages.filter(msg => msg.role === 'user').pop()
+    let kbChunks: any[] = []
+    
+    if (lastUserMessage) {
+      // Query knowledge base for relevant chunks
+      const kbResult = await KnowledgeBaseStore.query(lastUserMessage.content, 3)
+      kbChunks = kbResult.chunks
+    }
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
@@ -58,7 +69,13 @@ export async function sendChatMessage(
           content: msg.content
         })),
         model,
-        stream: !!onStream
+        stream: !!onStream,
+        kbChunks: kbChunks.map(chunk => ({
+          content: chunk.content,
+          source: chunk.metadata.sourceUrl,
+          title: chunk.metadata.title,
+          similarity: chunk.similarity
+        }))
       })
     })
 

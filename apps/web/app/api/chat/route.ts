@@ -10,12 +10,18 @@ interface ChatRequest {
   model?: string
   stream?: boolean
   farmId?: string
+  kbChunks?: Array<{
+    content: string
+    source: string
+    title: string
+    similarity: number
+  }>
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: ChatRequest = await request.json()
-    const { messages, model, stream = true, farmId = 'default' } = body
+    const { messages, model, stream = true, farmId = 'default', kbChunks = [] } = body
 
     // Extract knowledge from user messages automatically (but don't update profile server-side)
     let extractedKnowledge = null
@@ -41,10 +47,8 @@ export async function POST(request: NextRequest) {
       ? `Recent farm activity detected: ${JSON.stringify(extractedKnowledge)}`
       : 'No farm profile available - will build from conversations'
     
-    // Add system prompt for farming context with farm-specific information
-    const systemPrompt: ChatMessage = {
-      role: 'system',
-      content: `You are PasturePilot, an AI assistant specialized in regenerative livestock farming. You help farmers with:
+    // Add system prompt for farming context with farm-specific information and KB sources
+    let systemContent = `You are PasturePilot, an AI assistant specialized in regenerative livestock farming. You help farmers with:
 - Sheep health, behavior, and welfare
 - Pasture management and rotational grazing
 - Regenerative farming practices
@@ -55,6 +59,19 @@ FARM CONTEXT:
 ${farmSummary}
 
 Use this context to provide personalized, relevant advice. Reference specific paddocks, animals, and patterns when helpful. Always be practical, supportive, and focus on sustainable farming practices. Use farming-related emojis when appropriate (🐑 🌱 📝 🌾 🚜). Keep responses concise but helpful.`
+
+    // Add KB sources if available
+    if (kbChunks.length > 0) {
+      systemContent += `\n\nUse these sources to provide more detailed and accurate information:\n`
+      kbChunks.forEach((chunk, index) => {
+        systemContent += `\nSource ${index + 1} (${chunk.title}): ${chunk.content}\n[Source URL: ${chunk.source}]\n`
+      })
+      systemContent += `\nWhen referencing these sources, include the source URL in your response for citation.`
+    }
+
+    const systemPrompt: ChatMessage = {
+      role: 'system',
+      content: systemContent
     }
 
     // Prepare messages with system prompt

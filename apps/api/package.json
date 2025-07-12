@@ -9,7 +9,13 @@
     "start": "node dist/index.js",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "ingest-sample": "ts-node src/scripts/ingest-sample-data.ts",
+    "kb-stats": "ts-node -e \"import('./src/agents/kb-store').then(({kbStore}) => kbStore.initialize().then(() => kbStore.getStats()).then(console.log))\"",
+    "test-kb": "ts-node src/scripts/test-kb-connection.ts",
+    "test-kb-debug": "ts-node src/scripts/test-kb-connection.ts --debug",
+    "test-kb-types": "ts-node src/scripts/test-kb-types.ts",
+    "proof-of-concept": "ts-node src/scripts/proof-of-concept.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.5",
@@ -22,7 +28,8 @@
     "multer": "^1.4.5-lts.1",
     "sharp": "^0.33.1",
     "uuid": "^9.0.1",
-    "date-fns": "^3.0.6"
+    "date-fns": "^3.0.6",
+    "mongodb": "^6.17.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -30,6 +37,7 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^20.10.6",
     "@types/uuid": "^9.0.7",
+    "@pasture-pilot/shared": "*",
     "typescript": "^5.3.3",
     "ts-node": "^10.9.2",
     "nodemon": "^3.0.2",
