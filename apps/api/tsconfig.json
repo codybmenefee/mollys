@@ -17,7 +17,8 @@
       "@/agents/*": ["./src/agents/*"],
       "@/lib/*": ["./src/lib/*"],
       "@/routes/*": ["./src/routes/*"],
-      "@/types/*": ["./src/types/*"]
+      "@/types/*": ["./src/types/*"],
+      "@pasture-pilot/shared": ["../../packages/shared/src"]
     },
     "types": ["node"],
     "resolveJsonModule": true
