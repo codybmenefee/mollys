@@ -208,12 +208,9 @@ export class KBProcessor {
         throw new Error('Audio file was not created by yt-dlp')
       }
 
-      // Read the audio file
-      const audioBuffer = await fs.readFile(audioFilePath)
-      
       // Transcribe using OpenAI Whisper
       console.log(`Transcribing audio for video ${source.videoId}...`)
-      const transcriptionResult = await transcribeAudio(audioBuffer, {
+      const transcriptionResult = await transcribeAudio(audioFilePath, {
         language: 'en', // Default to English, could be made configurable
         temperature: 0.0 // More deterministic results
       })

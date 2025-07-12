@@ -15,6 +15,8 @@ export interface KBChunk {
     videoId?: string
     duration?: number
     timestamp?: number
+    summary?: string
+    insights?: string[]
   }
 }
 
@@ -35,7 +37,12 @@ export interface TranscriptInput {
 export function extractYouTubeId(url: string): string | null {
   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
   const match = url.match(regex)
-  return match ? match[1] : null
+  if (match && match[1]) {
+    // Ensure we have exactly 11 characters for a valid YouTube ID
+    const id = match[1].substring(0, 11)
+    return id.length === 11 ? id : null
+  }
+  return null
 }
 
 /**

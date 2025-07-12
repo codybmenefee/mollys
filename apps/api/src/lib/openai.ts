@@ -1,4 +1,5 @@
 import OpenAI from 'openai'
+import { createReadStream } from 'fs'
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -24,7 +25,7 @@ export interface ChatResponse {
  * Transcribe audio using Whisper API
  */
 export async function transcribeAudio(
-  audioFile: File | Buffer,
+  audioFilePath: string,
   options: {
     language?: string
     prompt?: string
@@ -33,7 +34,7 @@ export async function transcribeAudio(
 ): Promise<TranscriptionResult> {
   try {
     const transcription = await openai.audio.transcriptions.create({
-      file: audioFile,
+      file: createReadStream(audioFilePath),
       model: 'whisper-1',
       language: options.language,
       prompt: options.prompt,
@@ -102,7 +103,7 @@ If you're unsure about medical issues, recommend consulting a veterinarian.`
  * Analyze image with vision model
  */
 export async function analyzeImage(
-  imageUrl: string | Buffer,
+  imageUrl: string,
   prompt: string = "Analyze this image in the context of sheep farming. What do you observe about the animals, their behavior, health, or environment?"
 ): Promise<string> {
   try {
@@ -116,7 +117,7 @@ export async function analyzeImage(
             {
               type: "image_url",
               image_url: {
-                url: typeof imageUrl === 'string' ? imageUrl : `data:image/jpeg;base64,${imageUrl.toString('base64')}`,
+                url: imageUrl,
               },
             },
           ],
