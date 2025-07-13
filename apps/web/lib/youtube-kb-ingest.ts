@@ -5,9 +5,15 @@ import { youtube_v3 } from 'googleapis';
 export interface YouTubeVideo {
   videoId: string;
   title: string;
+  description: string;
   url: string;
-  transcript: string | null;
   publishDate: string;
+  duration: string;
+  viewCount: number;
+  thumbnail: string;
+  channelTitle: string;
+  tags: string[];
+  // Note: transcript will be generated using Whisper during processing
 }
 
 export interface YouTubeIngestionError {
@@ -34,6 +40,7 @@ export class YouTubeKBIngest {
   private initializeYouTubeClient(): youtube_v3.Youtube {
     if (!this.youtube) {
       const apiKey = process.env.YOUTUBE_API_KEY;
+      
       if (!apiKey) {
         throw new Error('YOUTUBE_API_KEY environment variable is required');
       }
@@ -58,21 +65,17 @@ export class YouTubeKBIngest {
       const videoMetadata = await this.fetchVideoMetadata(uploadsPlaylistId);
       console.log(`Fetched ${videoMetadata.length} videos metadata`);
 
-      // Step 3: Process each video to get transcript
+      // Step 3: Get detailed video information
       const videos: YouTubeVideo[] = [];
       const errors: YouTubeIngestionError[] = [];
 
       for (const video of videoMetadata) {
         try {
-          const transcript = await this.getVideoTranscript(video.videoId);
-          
-          videos.push({
-            videoId: video.videoId,
-            title: video.title,
-            url: `https://www.youtube.com/watch?v=${video.videoId}`,
-            transcript,
-            publishDate: video.publishDate,
-          });
+          const detailedVideo = await this.getDetailedVideoInfo(video.videoId);
+          if (detailedVideo) {
+            videos.push(detailedVideo);
+            console.log(`✓ Processed video: ${detailedVideo.title}`);
+          }
         } catch (error) {
           console.error(`Error processing video ${video.videoId}:`, error);
           errors.push({
@@ -150,79 +153,53 @@ export class YouTubeKBIngest {
     }
   }
 
-  private async getVideoTranscript(videoId: string): Promise<string | null> {
+  private async getDetailedVideoInfo(videoId: string): Promise<YouTubeVideo | null> {
     try {
       const youtube = this.initializeYouTubeClient();
       
-      // Step 1: Get available captions for the video
-      const captionsResponse = await youtube.captions.list({
-        part: ['snippet'],
-        videoId,
+      const response = await youtube.videos.list({
+        part: ['snippet', 'statistics', 'contentDetails'],
+        id: [videoId],
       });
 
-      const captions = captionsResponse.data.items || [];
-      
-      // Look for auto-generated captions first, then any English captions
-      const autoCaption = captions.find(caption => 
-        caption.snippet?.trackKind === 'asr' && 
-        caption.snippet?.language === 'en'
-      );
-      
-      const englishCaption = captions.find(caption => 
-        caption.snippet?.language === 'en'
-      );
-
-      const selectedCaption = autoCaption || englishCaption;
-
-      if (!selectedCaption?.id) {
-        console.log(`No captions available for video ${videoId}`);
+      const video = response.data.items?.[0];
+      if (!video) {
+        console.log(`No video found for ID: ${videoId}`);
         return null;
       }
 
-      // Step 2: Download the caption
-      try {
-        const captionResponse = await youtube.captions.download({
-          id: selectedCaption.id,
-          tfmt: 'srt', // Request SRT format
-        });
+      const snippet = video.snippet;
+      const statistics = video.statistics;
+      const contentDetails = video.contentDetails;
 
-        // The response should contain the caption text
-        if (captionResponse.data && typeof captionResponse.data === 'string') {
-          return this.parseSRTTranscript(captionResponse.data);
-        }
-        
-        console.log(`Caption download returned empty data for video ${videoId}`);
-        return null;
-      } catch (downloadError) {
-        console.log(`Could not download captions for video ${videoId}:`, downloadError);
-        return null;
-      }
+      return {
+        videoId,
+        title: snippet?.title || 'Unknown Title',
+        description: snippet?.description || '',
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        publishDate: snippet?.publishedAt || new Date().toISOString(),
+        duration: contentDetails?.duration || 'PT0S',
+        viewCount: parseInt(statistics?.viewCount || '0', 10),
+        thumbnail: snippet?.thumbnails?.high?.url || snippet?.thumbnails?.default?.url || '',
+        channelTitle: snippet?.channelTitle || 'Unknown Channel',
+        tags: snippet?.tags || [],
+      };
     } catch (error) {
-      console.log(`Error getting transcript for video ${videoId}:`, error);
-      return null;
+      console.error(`Error getting detailed video info for ${videoId}:`, error);
+      throw error;
     }
   }
 
-  private parseSRTTranscript(srtContent: string): string {
-    try {
-      // Parse SRT format to extract just the text
-      const lines = srtContent.split('\n');
-      const textLines: string[] = [];
-      
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        
-        // Skip sequence numbers and timestamps
-        if (line && !line.match(/^\d+$/) && !line.match(/^\d{2}:\d{2}:\d{2},\d{3}\s*-->\s*\d{2}:\d{2}:\d{2},\d{3}$/)) {
-          textLines.push(line);
-        }
-      }
-      
-      return textLines.join(' ').trim();
-    } catch (error) {
-      console.error('Error parsing SRT transcript:', error);
-      return srtContent; // Return raw content if parsing fails
-    }
+  // Helper method to parse YouTube duration format (PT4M13S) to seconds
+  private parseDuration(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    
+    const hours = parseInt(match[1] || '0', 10);
+    const minutes = parseInt(match[2] || '0', 10);
+    const seconds = parseInt(match[3] || '0', 10);
+    
+    return hours * 3600 + minutes * 60 + seconds;
   }
 }
 

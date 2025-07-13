@@ -1,0 +1,15 @@
+{
+  "pipelineRun": "2025-07-12T21:23:26.403Z",
+  "videosProcessed": 1,
+  "videosCompleted": 0,
+  "videosFailed": 1,
+  "errors": [
+    {
+      "videoId": "RjGAxTEPuAM",
+      "stage": "download",
+      "error": "Failed to transcribe audio: OpenRouter API error: 413 Request Entity Too Large\n\nRequest Entity Too Large\n\nFUNCTION_PAYLOAD_TOO_LARGE\n\niad1::j4lch-1752355405547-73e7c05137bf\n"
+    }
+  ],
+  "completedVideos": [],
+  "processedVideos": []
+}

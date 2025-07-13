@@ -2,6 +2,7 @@
 
 import React from 'react'
 import { ChatMessage } from '@/types/chat'
+import SourceCitations from './SourceCitations'
 
 interface MessageRendererProps {
   message: ChatMessage
@@ -133,6 +134,10 @@ export default function MessageRenderer({ message, isStreaming }: MessageRendere
           <div className="mt-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
             Error: {message.metadata.error}
           </div>
+        )}
+        
+        {message.role === 'assistant' && message.metadata?.sources && (
+          <SourceCitations sources={message.metadata.sources} />
         )}
       </div>
     </div>

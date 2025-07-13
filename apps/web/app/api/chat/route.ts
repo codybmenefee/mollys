@@ -15,6 +15,11 @@ interface ChatRequest {
     source: string
     title: string
     similarity: number
+    sourceType?: 'youtube' | 'article' | 'document' | 'manual'
+    videoId?: string
+    channelTitle?: string
+    publishDate?: string
+    relevanceScore?: number
   }>
 }
 
@@ -62,11 +67,17 @@ Use this context to provide personalized, relevant advice. Reference specific pa
 
     // Add KB sources if available
     if (kbChunks.length > 0) {
-      systemContent += `\n\nUse these sources to provide more detailed and accurate information:\n`
+      systemContent += `\n\nRELEVANT SOURCES (use these to provide accurate, detailed information):\n`
       kbChunks.forEach((chunk, index) => {
-        systemContent += `\nSource ${index + 1} (${chunk.title}): ${chunk.content}\n[Source URL: ${chunk.source}]\n`
+        const sourceType = chunk.sourceType === 'youtube' ? 'Video' : 'Article'
+        const sourceInfo = chunk.channelTitle ? `by ${chunk.channelTitle}` : ''
+        const publishInfo = chunk.publishDate ? `(${new Date(chunk.publishDate).getFullYear()})` : ''
+        systemContent += `\n[${sourceType} ${index + 1}] "${chunk.title}" ${sourceInfo} ${publishInfo}\n`
+        systemContent += `Content: ${chunk.content}\n`
+        systemContent += `Source URL: ${chunk.source}\n`
+        systemContent += `Relevance Score: ${(chunk.relevanceScore || chunk.similarity || 0).toFixed(2)}\n`
       })
-      systemContent += `\nWhen referencing these sources, include the source URL in your response for citation.`
+      systemContent += `\nIMPORTANT: When using information from these sources, include proper citations in your response using this format: "According to [Source Title](source_url)..." Make citations prominent and user-friendly.`
     }
 
     const systemPrompt: ChatMessage = {

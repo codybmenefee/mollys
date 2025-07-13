@@ -75,7 +75,7 @@ export default function Home() {
     const startTime = Date.now()
 
     try {
-      await sendChatMessage(
+      const chatResponse = await sendChatMessage(
         [...messages, userMessage],
         selectedModel,
         (streamResponse) => {
@@ -83,7 +83,14 @@ export default function Home() {
             setMessages((prev: Message[]) => 
               prev.map((msg: Message) => 
                 msg.id === aiMessageId 
-                  ? { ...msg, content: streamResponse.message }
+                  ? { 
+                      ...msg, 
+                      content: streamResponse.message,
+                      metadata: {
+                        ...msg.metadata,
+                        sources: (streamResponse as any).sources
+                      }
+                    }
                   : msg
               )
             )
@@ -103,7 +110,11 @@ export default function Home() {
             // Save conversation
             ChatHistory.saveConversation([...messages, userMessage, {
               ...aiMessage,
-              content: streamResponse.message
+              content: streamResponse.message,
+              metadata: {
+                ...aiMessage.metadata,
+                sources: (streamResponse as any).sources
+              }
             }])
           } else {
             setStreamingMessage(streamResponse.message)

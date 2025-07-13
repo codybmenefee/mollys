@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-whisper": "node --experimental-loader dotenv/config test-openai-whisper.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.17",
@@ -20,12 +21,15 @@
     "@tailwindcss/typography": "^0.5.16",
     "clsx": "^2.0.0",
     "date-fns": "^3.0.6",
+    "dotenv": "^17.2.0",
+    "form-data": "^4.0.3",
     "framer-motion": "^10.16.16",
     "googleapis": "^152.0.0",
     "lucide-react": "^0.303.0",
     "mongodb": "^6.17.0",
     "next": "^14.0.4",
     "next-pwa": "^5.6.0",
+    "node-fetch": "^3.3.2",
     "openai": "^4.20.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -33,12 +37,15 @@
     "react-hot-toast": "^2.4.1",
     "tailwind-merge": "^2.2.0",
     "workbox-window": "^7.0.0",
+    "yt-dlp-wrap": "^2.3.12",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.6",
     "@testing-library/react": "^14.1.2",
+    "@types/form-data": "^2.2.1",
     "@types/node": "^20.10.6",
+    "@types/node-fetch": "^2.6.12",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^6.16.0",

@@ -13,9 +13,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Optional: Add basic auth or rate limiting here
-    // For now, we'll proceed without authentication
-
     console.log('Starting YouTube ingestion process...');
     
     // Execute the ingestion
@@ -48,8 +45,14 @@ export async function POST(request: NextRequest) {
             totalFetched: result.totalFetched,
           },
           errors: result.errors,
-          // Don't store the actual videos in the log to save space
-          // videos: result.videos.map(v => ({ videoId: v.videoId, title: v.title })),
+          // Store video metadata for processing pipeline
+          videosSummary: result.videos.map(v => ({ 
+            videoId: v.videoId, 
+            title: v.title,
+            duration: v.duration,
+            publishDate: v.publishDate,
+            viewCount: v.viewCount
+          })),
         });
         
         console.log('Ingestion results logged to MongoDB');
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return success response
+    // Return success response with video metadata
     return NextResponse.json({
       success: true,
       message: 'YouTube ingestion completed successfully',
@@ -79,6 +82,10 @@ export async function POST(request: NextRequest) {
         errorCount: result.errors.length,
         videos: result.videos,
       },
+      notes: {
+        transcription: 'Video transcripts will be generated using Whisper during processing',
+        nextSteps: 'Videos are ready for audio extraction and transcription pipeline'
+      }
     });
 
   } catch (error) {

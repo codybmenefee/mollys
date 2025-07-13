@@ -12,7 +12,10 @@ export interface ChatMessage {
     sources?: Array<{
       url: string
       title: string
-      type: string
+      type: 'youtube' | 'article' | 'document' | 'manual'
+      channelTitle?: string
+      publishDate?: string
+      relevanceScore?: number
     }>
   }
 }

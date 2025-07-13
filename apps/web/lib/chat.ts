@@ -1,10 +1,17 @@
 import { ChatMessage } from '@/types/chat'
-import { KnowledgeBaseStore } from './kb-store'
 
 export interface StreamResponse {
   message: string
   isComplete: boolean
   error?: string
+  sources?: Array<{
+    url: string
+    title: string
+    type: 'youtube' | 'article' | 'document' | 'manual'
+    channelTitle?: string
+    publishDate?: string
+    relevanceScore?: number
+  }>
 }
 
 export interface ChatResponse {
@@ -16,6 +23,14 @@ export interface ChatResponse {
     completion_tokens: number
     total_tokens: number
   }
+  sources?: Array<{
+    url: string
+    title: string
+    type: 'youtube' | 'article' | 'document' | 'manual'
+    channelTitle?: string
+    publishDate?: string
+    relevanceScore?: number
+  }>
 }
 
 // Available models for the dropdown
@@ -53,9 +68,40 @@ export async function sendChatMessage(
     let kbChunks: any[] = []
     
     if (lastUserMessage) {
-      // Query knowledge base for relevant chunks
-      const kbResult = await KnowledgeBaseStore.query(lastUserMessage.content, 3)
-      kbChunks = kbResult.chunks
+      // Query enhanced knowledge base for relevant chunks (including video transcripts)
+      try {
+        const kbResponse = await fetch('/api/kb/enhanced-query', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: lastUserMessage.content,
+            topK: 3
+          })
+        })
+        
+        if (kbResponse.ok) {
+          const kbResult = await kbResponse.json()
+          kbChunks = kbResult.chunks
+          
+          // Store source information for citation display
+          if (kbChunks.length > 0) {
+            // Create a temporary property to pass sources to the completion handler
+            (messages as any).kbSources = kbChunks.map((chunk: any) => ({
+              url: chunk.metadata.sourceUrl,
+              title: chunk.metadata.title,
+              type: chunk.sourceType,
+              channelTitle: chunk.channelTitle,
+              publishDate: chunk.publishDate,
+              relevanceScore: chunk.relevanceScore || chunk.similarity
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Failed to query enhanced KB:', error)
+        // Continue without KB chunks if the query fails
+      }
     }
 
     const response = await fetch('/api/chat', {
@@ -70,11 +116,16 @@ export async function sendChatMessage(
         })),
         model,
         stream: !!onStream,
-        kbChunks: kbChunks.map(chunk => ({
+        kbChunks: kbChunks.map((chunk: any) => ({
           content: chunk.content,
           source: chunk.metadata.sourceUrl,
           title: chunk.metadata.title,
-          similarity: chunk.similarity
+          similarity: chunk.similarity,
+          sourceType: chunk.sourceType,
+          videoId: chunk.videoId,
+          channelTitle: chunk.channelTitle,
+          publishDate: chunk.publishDate,
+          relevanceScore: chunk.relevanceScore
         }))
       })
     })
@@ -108,12 +159,14 @@ export async function sendChatMessage(
               if (data === '[DONE]') {
                 onStream({
                   message: fullMessage,
-                  isComplete: true
+                  isComplete: true,
+                  sources: (messages as any).kbSources || []
                 })
                 return {
                   message: fullMessage,
                   model: model || 'unknown',
-                  timestamp: new Date()
+                  timestamp: new Date(),
+                  sources: (messages as any).kbSources || []
                 }
               }
 
@@ -141,7 +194,8 @@ export async function sendChatMessage(
       return {
         message: fullMessage,
         model: model || 'unknown',
-        timestamp: new Date()
+        timestamp: new Date(),
+        sources: (messages as any).kbSources || []
       }
     } else {
       // Handle non-streaming response
@@ -152,7 +206,8 @@ export async function sendChatMessage(
         message,
         model: data.model || model || 'unknown',
         timestamp: new Date(),
-        usage: data.usage
+        usage: data.usage,
+        sources: (messages as any).kbSources || []
       }
     }
   } catch (error) {
