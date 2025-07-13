@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { LinkIcon, PlayIcon, DocumentIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { PlayIcon, DocumentIcon, BookOpenIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 
 interface SourceCitation {
   url: string
@@ -24,72 +24,105 @@ export default function SourceCitations({ sources }: SourceCitationsProps) {
   const getSourceIcon = (type: string) => {
     switch (type) {
       case 'youtube':
-        return <PlayIcon className="w-4 h-4" />
+        return <PlayIcon className="w-3.5 h-3.5 text-red-500" />
       case 'document':
-        return <DocumentIcon className="w-4 h-4" />
+        return <DocumentIcon className="w-3.5 h-3.5 text-blue-500" />
       case 'manual':
-        return <BookOpenIcon className="w-4 h-4" />
+        return <BookOpenIcon className="w-3.5 h-3.5 text-green-500" />
       default:
-        return <LinkIcon className="w-4 h-4" />
+        return <GlobeAltIcon className="w-3.5 h-3.5 text-gray-500" />
     }
   }
 
-  const getSourceTypeLabel = (type: string) => {
+  const getSourceTypeColor = (type: string) => {
     switch (type) {
       case 'youtube':
-        return 'Video'
+        return 'bg-red-50 text-red-700 border-red-100'
       case 'document':
-        return 'Document'
+        return 'bg-blue-50 text-blue-700 border-blue-100'
       case 'manual':
-        return 'Manual'
+        return 'bg-green-50 text-green-700 border-green-100'
       default:
-        return 'Article'
+        return 'bg-gray-50 text-gray-700 border-gray-100'
     }
   }
 
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).getFullYear()
+      const date = new Date(dateString)
+      return date.getFullYear()
     } catch {
       return null
     }
   }
 
+  const formatYouTubeUrl = (url: string) => {
+    // Extract video ID and ensure it's a proper YouTube URL
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/)
+    if (videoIdMatch) {
+      return `https://www.youtube.com/watch?v=${videoIdMatch[1]}`
+    }
+    return url
+  }
+
+  const truncateTitle = (title: string, maxLength: number = 80) => {
+    if (title.length <= maxLength) return title
+    return title.slice(0, maxLength) + '...'
+  }
+
   return (
-    <div className="mt-3 border-t border-gray-200 pt-3">
-      <div className="text-xs text-gray-500 mb-2 font-medium">
-        📚 Sources used in this response:
+    <div className="mt-4 border-t border-gray-100 pt-3">
+      <div className="text-xs font-medium text-gray-600 mb-3 flex items-center gap-1">
+        <span>Sources</span>
+        <span className="text-gray-400">({sources.length})</span>
       </div>
+      
       <div className="space-y-2">
         {sources.map((source, index) => (
-          <div key={index} className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-start space-x-2">
-              <div className="flex-shrink-0 mt-0.5 text-gray-500">
-                {getSourceIcon(source.type)}
+          <div key={index} className="group">
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50/50 transition-all duration-200">
+              <div className="flex-shrink-0 mt-0.5">
+                <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                  {index + 1}
+                </div>
               </div>
+              
               <div className="flex-1 min-w-0">
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {getSourceTypeLabel(source.type)}
+                <div className="flex items-center gap-2 mb-1.5">
+                  {getSourceIcon(source.type)}
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${getSourceTypeColor(source.type)}`}>
+                    {source.type === 'youtube' ? 'Video' : source.type.charAt(0).toUpperCase() + source.type.slice(1)}
                   </span>
                   {source.relevanceScore && (
-                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                      {(source.relevanceScore * 100).toFixed(0)}% relevant
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      {Math.round(source.relevanceScore * 100)}% match
                     </span>
                   )}
                 </div>
+                
                 <a 
-                  href={source.url}
+                  href={source.type === 'youtube' ? formatYouTubeUrl(source.url) : source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors line-clamp-2 mt-1 block"
+                  className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors duration-200 block group-hover:underline"
+                  title={source.title}
                 >
-                  {source.title}
+                  {truncateTitle(source.title)}
                 </a>
-                {source.channelTitle && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    by {source.channelTitle}
-                    {source.publishDate && ` • ${formatDate(source.publishDate)}`}
+                
+                {(source.channelTitle || source.publishDate) && (
+                  <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                    {source.channelTitle && (
+                      <span className="truncate max-w-[150px]" title={source.channelTitle}>
+                        {source.channelTitle}
+                      </span>
+                    )}
+                    {source.channelTitle && source.publishDate && (
+                      <span className="text-gray-400">•</span>
+                    )}
+                    {source.publishDate && (
+                      <span>{formatDate(source.publishDate)}</span>
+                    )}
                   </div>
                 )}
               </div>

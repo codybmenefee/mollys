@@ -13,6 +13,7 @@ import { MicrophoneIcon as MicrophoneIconSolid } from '@heroicons/react/24/solid
 import { sendChatMessage, ChatHistory, ChatLogger, AVAILABLE_MODELS } from '@/lib/chat'
 import { ChatMessage } from '@/types/chat'
 import ModelSelector from '@/components/ModelSelector'
+import MessageRenderer from '@/components/MessageRenderer'
 
 interface Message extends ChatMessage {
   // Extending ChatMessage for local use
@@ -227,23 +228,11 @@ export default function Home() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
-          <div
+          <MessageRenderer
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={`${
-              message.role === 'user' 
-                ? 'chat-bubble-user' 
-                : 'chat-bubble-ai border border-gray-200'
-            }`}>
-              <p className="text-sm">{message.content}</p>
-              <p className={`text-xs mt-1 ${
-                message.role === 'user' ? 'text-pasture-100' : 'text-gray-500'
-              }`}>
-                {formatTime(message.timestamp)}
-              </p>
-            </div>
-          </div>
+            message={message}
+            isStreaming={isLoading && message.id === messages[messages.length - 1]?.id}
+          />
         ))}
         
         {isLoading && (
