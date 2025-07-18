@@ -89,7 +89,7 @@ export default function Home() {
                       content: streamResponse.message,
                       metadata: {
                         ...msg.metadata,
-                        sources: (streamResponse as any).sources
+                        sources: streamResponse.sources
                       }
                     }
                   : msg
@@ -114,7 +114,7 @@ export default function Home() {
               content: streamResponse.message,
               metadata: {
                 ...aiMessage.metadata,
-                sources: (streamResponse as any).sources
+                sources: streamResponse.sources
               }
             }])
           } else {

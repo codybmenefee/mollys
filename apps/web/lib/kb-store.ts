@@ -244,7 +244,11 @@ export class KnowledgeBaseStore {
    * Generate embedding for a query
    */
   private static async generateQueryEmbedding(text: string): Promise<number[]> {
-    const response = await fetch('/api/kb/embed', {
+    // Construct absolute URL for server-side fetch
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'
+    const embedUrl = `${baseUrl}/api/kb/embed`
+    
+    const response = await fetch(embedUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

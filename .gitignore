@@ -90,3 +90,48 @@ secrets/
 *.pem
 *.key
 *.cert
+
+# Prevent future clutter
+# Test files and experimental scripts
+test-*.js
+test-*.ts
+test-*.mjs
+*-test.js
+*-test.ts
+experiment-*.js
+experiment-*.ts
+debug-*.js
+debug-*.ts
+temp-*.js
+temp-*.ts
+
+# Audio/video processing temporary files
+*.mp3
+*.mp4
+*.wav
+*.avi
+*.mov
+audio-downloads/
+video-downloads/
+pipeline-output/
+transcriptions/
+
+# Temporary MongoDB setup files
+setup-*-mongodb.md
+*-mongodb-connection.js
+*-mongodb-*.js
+
+# Backup and temporary documentation
+*-backup.md
+*-old.md
+*-temp.md
+*.md.bak
+
+# Video status and experimental files
+check-video-status.*
+video-status.*
+
+# Development tools output
+*.log.*
+debug.log
+error.log

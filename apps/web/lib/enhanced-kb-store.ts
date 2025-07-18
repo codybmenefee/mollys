@@ -34,22 +34,26 @@ export class EnhancedKBStore {
       // Initialize video KB store if needed
       await this.videoKBStore.initialize();
       
-      // Query traditional KB
-      const traditionalResult = await KnowledgeBaseStore.query(query, Math.ceil(topK / 2));
+      // Query video KB with higher priority (more results)
+      const videoResult = await this.queryVideoKB(query, topK * 2);
       
-      // Query video KB
-      const videoResult = await this.queryVideoKB(query, Math.ceil(topK / 2));
+      // Query traditional KB (reduced priority due to embedding issues)
+      let traditionalResult;
+      try {
+        traditionalResult = await KnowledgeBaseStore.query(query, Math.ceil(topK / 4));
+      } catch (error) {
+        console.error('Traditional KB query failed, using video KB only:', error);
+        traditionalResult = { chunks: [], sources: new Set<string>(), totalChunks: 0 };
+      }
       
-      // Combine and rank results
+      // Combine and rank results with diversity promotion
       const combinedChunks = [
         ...traditionalResult.chunks.map(chunk => this.enhanceTraditionalChunk(chunk)),
         ...videoResult
       ];
       
-      // Sort by relevance score and take top K
-      const topChunks = combinedChunks
-        .sort((a, b) => (b.relevanceScore || b.similarity || 0) - (a.relevanceScore || a.similarity || 0))
-        .slice(0, topK);
+      // Promote diversity by selecting chunks from different sources
+      const topChunks = this.selectDiverseChunks(combinedChunks, topK);
       
       const sources = new Set([
         ...Array.from(traditionalResult.sources),
@@ -78,18 +82,30 @@ export class EnhancedKBStore {
    */
   private static async queryVideoKB(query: string, limit: number): Promise<EnhancedKnowledgeChunk[]> {
     try {
-      const videos = await this.videoKBStore.searchVideos(query, limit * 2);
+      // Get more videos to ensure diversity
+      const videos = await this.videoKBStore.searchVideos(query, Math.max(limit, 10));
       const chunks: EnhancedKnowledgeChunk[] = [];
       
+      // Process each video and get the best chunks
       for (const video of videos) {
         if (video.transcript && video.processingStatus === 'completed') {
           // Create chunks from video transcript
           const videoChunks = this.createVideoChunks(video, query);
-          chunks.push(...videoChunks);
+          // Take the best chunk from each video to promote diversity
+          if (videoChunks.length > 0) {
+            chunks.push(videoChunks[0]); // Best chunk from this video
+            // Add second best chunk if it's significantly different
+            if (videoChunks.length > 1 && videoChunks[1].relevanceScore && videoChunks[1].relevanceScore > 0.3) {
+              chunks.push(videoChunks[1]);
+            }
+          }
         }
       }
       
-      return chunks.slice(0, limit);
+      // Sort by relevance and return diverse results
+      return chunks
+        .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+        .slice(0, limit);
     } catch (error) {
       console.error('Video KB query error:', error);
       return [];
@@ -206,6 +222,54 @@ export class EnhancedKBStore {
     
     // Normalize by text length
     return Math.min(score / Math.max(textWords.length / 50, 1), 1);
+  }
+  
+  /**
+   * Select diverse chunks to ensure representation from multiple sources
+   */
+  private static selectDiverseChunks(chunks: EnhancedKnowledgeChunk[], topK: number): EnhancedKnowledgeChunk[] {
+    if (chunks.length === 0) return [];
+    
+    // Sort all chunks by relevance score first
+    const sortedChunks = chunks.sort((a, b) => 
+      (b.relevanceScore || b.similarity || 0) - (a.relevanceScore || a.similarity || 0)
+    );
+    
+    const selectedChunks: EnhancedKnowledgeChunk[] = [];
+    const sourceTracker = new Map<string, number>(); // Track how many chunks per source
+    const maxChunksPerSource = Math.max(1, Math.floor(topK / 3)); // Allow up to topK/3 chunks per source
+    
+    // First pass: Select the best chunk from each unique source
+    const seenSources = new Set<string>();
+    for (const chunk of sortedChunks) {
+      const sourceUrl = chunk.metadata.sourceUrl;
+      if (!seenSources.has(sourceUrl) && selectedChunks.length < topK) {
+        selectedChunks.push(chunk);
+        seenSources.add(sourceUrl);
+        sourceTracker.set(sourceUrl, 1);
+      }
+    }
+    
+    // Second pass: Fill remaining slots with additional chunks, respecting per-source limits
+    for (const chunk of sortedChunks) {
+      if (selectedChunks.length >= topK) break;
+      
+      const sourceUrl = chunk.metadata.sourceUrl;
+      const currentCount = sourceTracker.get(sourceUrl) || 0;
+      
+      // Skip if we already selected this chunk or reached the per-source limit
+      if (selectedChunks.includes(chunk) || currentCount >= maxChunksPerSource) {
+        continue;
+      }
+      
+      selectedChunks.push(chunk);
+      sourceTracker.set(sourceUrl, currentCount + 1);
+    }
+    
+    // Sort final selection by relevance score again
+    return selectedChunks.sort((a, b) => 
+      (b.relevanceScore || b.similarity || 0) - (a.relevanceScore || a.similarity || 0)
+    );
   }
   
   /**

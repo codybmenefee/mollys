@@ -57,6 +57,54 @@ export const AVAILABLE_MODELS = [
   }
 ]
 
+// Function to determine topK based on query complexity
+function determineTopK(query: string): number {
+  // Convert to lowercase for analysis
+  const lowerQuery = query.toLowerCase()
+  
+  // Base topK
+  let topK = 3
+  
+  // Increase topK for complex queries
+  const complexityIndicators = [
+    'compare', 'comparison', 'different', 'alternatives', 'options',
+    'various', 'multiple', 'several', 'many', 'all', 'comprehensive',
+    'detailed', 'thorough', 'complete', 'extensive', 'in-depth',
+    'explain', 'describe', 'tell me about', 'what are', 'how do',
+    'research', 'studies', 'examples', 'cases', 'methods', 'techniques',
+    'approaches', 'strategies', 'practices', 'systems', 'types',
+    'kinds', 'varieties', 'breeds', 'species'
+  ]
+  
+  const questionWords = ['what', 'how', 'why', 'when', 'where', 'which', 'who']
+  const hasQuestionWord = questionWords.some(word => lowerQuery.includes(word))
+  
+  // Count complexity indicators
+  const complexityScore = complexityIndicators.reduce((score, indicator) => {
+    return score + (lowerQuery.includes(indicator) ? 1 : 0)
+  }, 0)
+  
+  // Adjust topK based on complexity
+  if (complexityScore >= 3 || (hasQuestionWord && complexityScore >= 2)) {
+    topK = 10 // High complexity - comprehensive answer needed
+  } else if (complexityScore >= 2 || (hasQuestionWord && complexityScore >= 1)) {
+    topK = 6 // Medium complexity
+  } else if (complexityScore >= 1 || hasQuestionWord) {
+    topK = 5 // Some complexity
+  }
+  
+  // Adjust for query length (longer queries often need more sources)
+  const wordCount = query.split(' ').length
+  if (wordCount > 15) {
+    topK = Math.min(topK + 2, 12)
+  } else if (wordCount > 10) {
+    topK = Math.min(topK + 1, 10)
+  }
+  
+  // Ensure minimum and maximum bounds
+  return Math.max(3, Math.min(topK, 15))
+}
+
 export async function sendChatMessage(
   messages: ChatMessage[],
   model?: string,
@@ -66,10 +114,14 @@ export async function sendChatMessage(
     // Get the last user message for KB retrieval
     const lastUserMessage = messages.filter(msg => msg.role === 'user').pop()
     let kbChunks: any[] = []
+    let kbSources: any[] = []
     
     if (lastUserMessage) {
       // Query enhanced knowledge base for relevant chunks (including video transcripts)
       try {
+        // Determine topK dynamically based on query complexity
+        const topK = determineTopK(lastUserMessage.content)
+        
         const kbResponse = await fetch('/api/kb/enhanced-query', {
           method: 'POST',
           headers: {
@@ -77,7 +129,7 @@ export async function sendChatMessage(
           },
           body: JSON.stringify({
             query: lastUserMessage.content,
-            topK: 3
+            topK
           })
         })
         
@@ -85,17 +137,37 @@ export async function sendChatMessage(
           const kbResult = await kbResponse.json()
           kbChunks = kbResult.chunks
           
-          // Store source information for citation display
+          // Store source information for citation display with deduplication
           if (kbChunks.length > 0) {
-            // Create a temporary property to pass sources to the completion handler
-            (messages as any).kbSources = kbChunks.map((chunk: any) => ({
-              url: chunk.metadata.sourceUrl,
-              title: chunk.metadata.title,
-              type: chunk.sourceType,
-              channelTitle: chunk.channelTitle,
-              publishDate: chunk.publishDate,
-              relevanceScore: chunk.relevanceScore || chunk.similarity
-            }))
+            // Create a Map to deduplicate sources by URL
+            const sourceMap = new Map<string, any>()
+            
+            kbChunks.forEach((chunk: any) => {
+              const sourceUrl = chunk.metadata.sourceUrl
+              
+              // Only add if we haven't seen this source URL before
+              if (!sourceMap.has(sourceUrl)) {
+                sourceMap.set(sourceUrl, {
+                  url: sourceUrl,
+                  title: chunk.metadata.title,
+                  type: chunk.sourceType,
+                  channelTitle: chunk.channelTitle,
+                  publishDate: chunk.publishDate,
+                  relevanceScore: chunk.relevanceScore || chunk.similarity
+                })
+              } else {
+                // If we've seen this source before, update relevance score if this chunk has a higher score
+                const existing = sourceMap.get(sourceUrl)
+                const currentScore = chunk.relevanceScore || chunk.similarity || 0
+                if (currentScore > (existing.relevanceScore || 0)) {
+                  existing.relevanceScore = currentScore
+                }
+              }
+            })
+            
+            // Convert Map to array and sort by relevance score
+            kbSources = Array.from(sourceMap.values())
+              .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
           }
         }
       } catch (error) {
@@ -143,36 +215,41 @@ export async function sendChatMessage(
       }
 
       let fullMessage = ''
-      const decoder = new TextDecoder()
+      let currentChunk = ''
 
       try {
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
 
-          const chunk = decoder.decode(value, { stream: true })
-          const lines = chunk.split('\n')
+          const chunk = new TextDecoder().decode(value)
+          currentChunk += chunk
+
+          // Process complete JSON objects
+          const lines = currentChunk.split('\n')
+          currentChunk = lines.pop() || ''
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const data = line.slice(6)
               if (data === '[DONE]') {
+                // Stream complete - send final response with sources
                 onStream({
                   message: fullMessage,
                   isComplete: true,
-                  sources: (messages as any).kbSources || []
+                  sources: kbSources // Pass the sources here
                 })
-                return {
-                  message: fullMessage,
+                return { 
+                  message: fullMessage, 
                   model: model || 'unknown',
                   timestamp: new Date(),
-                  sources: (messages as any).kbSources || []
+                  sources: kbSources 
                 }
               }
 
               try {
                 const parsed = JSON.parse(data)
-                const content = parsed.choices?.[0]?.delta?.content || ''
+                const content = parsed.choices[0]?.delta?.content
                 if (content) {
                   fullMessage += content
                   onStream({
@@ -191,11 +268,17 @@ export async function sendChatMessage(
         reader.releaseLock()
       }
 
-      return {
+      // Fallback if stream ended without [DONE]
+      onStream({
         message: fullMessage,
+        isComplete: true,
+        sources: kbSources
+      })
+      return { 
+        message: fullMessage, 
         model: model || 'unknown',
         timestamp: new Date(),
-        sources: (messages as any).kbSources || []
+        sources: kbSources 
       }
     } else {
       // Handle non-streaming response

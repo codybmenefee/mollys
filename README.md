@@ -7,14 +7,14 @@ An AI-first mobile farming assistant for regenerative livestock producers, start
 ```bash
 # Clone and setup
 git clone <your-repo-url>
-cd pasture-pilot
+cd mollys
 npm install
 
 # Setup environment
 cp .env.example .env.local
-# Add your OpenAI API key and Supabase credentials
+# Add your OpenRouter API key and other credentials
 
-# Start development servers
+# Start development
 npm run dev
 
 # Build for production
@@ -24,164 +24,173 @@ npm run build
 ## 📁 Project Structure
 
 ```
-pasture-pilot/
+mollys/
 ├── apps/
 │   ├── web/                    # Next.js frontend (PWA-ready)
-│   └── api/                    # Backend API & Edge Functions
+│   └── api/                    # Backend API services
 ├── packages/
 │   ├── shared/                 # Shared types and utilities
 │   └── database/               # Database schema and migrations
-├── docs/                       # API documentation
-└── scripts/                    # Build and deployment scripts
+├── docs/                       # 📚 Organized documentation
+│   ├── implementation/         # Technical implementation guides
+│   ├── setup/                  # Installation and configuration
+│   ├── features/               # Feature documentation
+│   └── README.md              # Documentation index
+└── Configuration files
 ```
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: Next.js 14 (App Router), Tailwind CSS, PWA
-- **Backend**: TypeScript, Vercel Edge Functions
-- **Database**: Supabase (PostgreSQL) with Prisma (planned)
-- **AI**: OpenAI API (GPT-4, Whisper)
+- **Backend**: TypeScript, Next.js API routes
+- **Database**: MongoDB with Supabase for authentication
+- **AI**: OpenRouter API (GPT-4, Claude, Mistral)
 - **Deployment**: Vercel
-- **Development**: AI-assisted with Cursor, Claude CLI, v0.dev
+- **Development**: AI-assisted with Cursor
 
-## 🎯 Development Workflow
+## ✨ Core Features
 
-### Daily Development
-1. **Morning Setup**: `npm run dev` to start all services
-2. **Testing**: Use the `/test` endpoint to validate AI integrations
-3. **Logging**: Daily farming logs automatically saved and summarized
-4. **Deployment**: Push to main branch triggers auto-deploy to Vercel
+### 🤖 AI Chat Interface
+- Multi-model AI assistance (GPT-4, Claude, Mistral)
+- Real-time streaming responses
+- Farming-specialized knowledge base
+- Source citations from YouTube videos and articles
 
-### AI-First Development
-- Use Cursor for code completion and refactoring
-- Leverage Claude CLI for architecture decisions
-- Use v0.dev for rapid UI component prototyping
-- Use a0.dev for backend API generation
+### 🎛️ Agent System
+- **ChatAgent**: Main conversational assistant
+- **LogSummarizer**: Daily farm log analysis
+- **KnowledgeExtractor**: Farm data extraction
+- **VoiceAgent**: Audio transcription (planned)
+- **VisionAgent**: Image analysis (planned)
 
-### Testing Strategy
-- **Local**: Manual testing with sample farming data
-- **Staging**: Deploy preview branches for feature testing
-- **Production**: Gradual rollout with feature flags
+### 📱 Mobile-First PWA
+- Installable on mobile devices
+- Offline capability
+- Touch-optimized interface
+- Voice and camera integration (planned)
 
-## 🚀 MVP Sprint Plan (Week 1-2)
+### 🧠 Knowledge Base
+- YouTube video transcript processing
+- Vector embeddings for semantic search
+- RAG (Retrieval-Augmented Generation)
+- Source citations and attribution
 
-### Core Features
-- [ ] **Conversational Interface**: Text input with AI response
-- [ ] **Daily Log Entry**: Record daily observations
-- [ ] **Voice Transcription**: Whisper API integration
-- [ ] **AI Summarization**: Daily/weekly summaries
-- [ ] **Mobile PWA**: Install on mobile devices
+## 📖 Documentation
 
-### Technical Milestones
-- [ ] Next.js app with Tailwind setup
-- [ ] Supabase database connection
-- [ ] OpenAI API integration
-- [ ] Basic authentication
-- [ ] PWA manifest and service worker
-- [ ] Vercel deployment pipeline
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[Getting Started](docs/setup/SETUP_COMPLETE.md)** - Complete setup guide
+- **[OpenRouter Integration](docs/setup/OPENROUTER_SETUP_COMPLETE.md)** - AI backend setup
+- **[Implementation Guides](docs/implementation/)** - Technical architecture
+- **[Features](docs/features/)** - Detailed feature documentation
+- **[API Reference](docs/api.md)** - Complete API documentation
 
 ## 🔧 Environment Setup
 
 ### Required Environment Variables
 ```bash
-# OpenAI
-OPENAI_API_KEY=your_openai_api_key
+# AI Integration
+OPENROUTER_API_KEY=your_openrouter_api_key
+DEFAULT_MODEL=mistralai/mistral-7b-instruct
 
-# Supabase
+# Database
+MONGODB_URI=your_mongodb_connection_string
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
-# App Configuration
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+# Optional
+YOUTUBE_API_KEY=your_youtube_api_key
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-### Database Setup
+### Quick Environment Setup
 ```bash
-# Initialize Supabase locally (optional)
-npx supabase init
-npx supabase start
+# Copy environment template
+cp .env.example .env.local
 
-# Or connect to cloud Supabase instance
-# Add your credentials to .env.local
+# Edit with your credentials
+nano .env.local
+
+# Start development server
+npm run dev
 ```
 
-## 📱 PWA Features
+## 🚀 Development Workflow
 
-- **Offline Support**: Core functionality works offline
-- **Install Prompt**: Native app-like installation
-- **Push Notifications**: Daily reminders and alerts
-- **Camera Integration**: Photo capture for livestock monitoring
-- **Voice Recording**: Hands-free log entry while in field
-
-## 🤖 AI Agent Architecture
-
-### Planned Agents
-- **LogAnalyzer**: Parse and categorize daily entries
-- **HealthMonitor**: Detect health patterns and alerts
-- **WeatherAdvisor**: Integrate weather data for grazing decisions
-- **SummaryGenerator**: Create daily/weekly reports
-
-### Integration Points
-- OpenAI GPT-4 for natural language understanding
-- Whisper for voice-to-text conversion
-- Future: Custom fine-tuned models for farming terminology
-
-## 🚀 Deployment
-
-### Vercel Deployment
-- **Frontend**: Automatic deployment from main branch
-- **Edge Functions**: Co-located with frontend for low latency
-- **Environment**: Production environment variables in Vercel dashboard
-
-### Performance Targets
-- **Initial Load**: < 2s on mobile
-- **AI Response**: < 3s for text, < 5s for voice
-- **Offline**: Core features functional without internet
-
-## 🔮 Future Roadmap
-
-### Phase 2 (Month 2-3)
-- Image analysis for livestock health monitoring
-- Weather integration and grazing recommendations
-- Multiple farm support and team collaboration
-- Advanced analytics and reporting
-
-### Phase 3 (Month 4-6)
-- Marketplace integration for feed/equipment
-- Community features for knowledge sharing
-- Integration with IoT sensors and farm equipment
-- Mobile app store deployment
-
-## 🛠️ Development Commands
-
+### Daily Development
 ```bash
-# Start all development servers
+# Start all services
 npm run dev
 
-# Build all packages
+# Run specific app
+npm run dev:web
+npm run dev:api
+
+# Build and test
 npm run build
-
-# Run tests
 npm run test
-
-# Deploy to staging
-npm run deploy:staging
-
-# Deploy to production
-npm run deploy:prod
-
-# Generate API documentation
-npm run docs:generate
 ```
 
-## 📚 Additional Resources
+### Key Commands
+```bash
+# Development
+npm run dev              # Start development server
+npm run build           # Build for production
+npm run start           # Start production server
+npm run lint            # Run ESLint
+npm run type-check      # TypeScript validation
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
+# Deployment
+vercel                  # Deploy to Vercel
+vercel --prod          # Production deployment
+```
+
+## 🔮 Roadmap
+
+### Current (v1.0)
+- ✅ Chat interface with OpenRouter
+- ✅ Knowledge base with YouTube transcripts
+- ✅ Agent system architecture
+- ✅ PWA mobile support
+- ✅ Farm profile management
+
+### Next Phase (v1.1)
+- 🔄 Voice recording and transcription
+- 🔄 Image analysis for livestock monitoring
+- 🔄 Weather integration
+- 🔄 Enhanced farm analytics
+
+### Future (v2.0)
+- 📅 Multi-farm support
+- 📅 Team collaboration features
+- 📅 IoT sensor integration
+- 📅 Marketplace integration
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes** with proper tests
+4. **Update documentation** as needed
+5. **Submit a pull request**
+
+### Development Guidelines
+- Follow TypeScript best practices
+- Update documentation for new features
+- Test on mobile devices
+- Follow farming terminology conventions
+
+## 📞 Support & Community
+
+- **Documentation**: Check the [`docs/`](docs/) directory
+- **Issues**: Open GitHub issues for bugs
+- **Features**: Discuss in GitHub discussions
+- **Setup Help**: See [setup guides](docs/setup/)
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ---
 
-Built with ❤️ for regenerative farming 🌱
+🌱 Built with ❤️ for regenerative farming
